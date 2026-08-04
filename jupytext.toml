@@ -1,0 +1,6 @@
+# /notebooks/jupytext.toml
+
+# Indica que la regla de emparejamiento ipynb <-> py:percent 
+# solo se aplica a los archivos dentro de la carpeta "notebooks"
+
+formats = "notebooks//ipynb,notebooks//py:percent"

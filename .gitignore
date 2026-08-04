@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / environment
+.env
+.envrc
+.streamlit/secrets.toml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editor
+.vscode/
