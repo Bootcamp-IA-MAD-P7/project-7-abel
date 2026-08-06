@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.19.5
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: project-7-abel (3.12.13)
 #     language: python
 #     name: python3
 # ---
@@ -46,12 +46,20 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 sns.set_theme(style='whitegrid')
 RANDOM_STATE = 42
 
+# Rutas relativas al notebook: funcionan desde cualquier cwd y crean los directorios.
+from pathlib import Path
+BASE_DIR = Path.cwd().parent
+DATA_CLEANED = BASE_DIR / 'data' / 'cleaned'
+DATA_PROCESSED = BASE_DIR / 'data' / 'processed'
+DATA_CLEANED.mkdir(parents=True, exist_ok=True)
+DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+
 # %% [markdown]
 # ### Leer conjunto de datos y primer vistazo
 
 # %%
 # Leer el csv (esta en 'data/raw/credit_card.csv') y mostrar las primeras filas.
-df = pd.read_csv('data/raw/credit_card.csv')
+df = pd.read_csv('../data/raw/credit_card.csv')
 df.head()
 
 # %% [markdown]
@@ -87,7 +95,7 @@ df = df.drop(columns=['CUST_ID'])
 df = df.fillna(df.median())
 
 # Guardamos el dataset limpio para reutilizarlo en fases posteriores
-df.to_parquet('data/cleaned/credit_card_cleaned.parquet')
+df.to_parquet(DATA_CLEANED / 'credit_card_cleaned.parquet')
 
 # %% [markdown]
 # #### Distribución de algunas variables
@@ -113,7 +121,7 @@ X = scaler.fit_transform(df)
 X_scaled = pd.DataFrame(X, columns=df.columns)
 
 # Guardamos el dataset escalado (listo para modelar) para reutilizarlo en fases posteriores
-X_scaled.to_parquet('data/processed/credit_card_scaled.parquet')
+X_scaled.to_parquet(DATA_PROCESSED / 'credit_card_scaled.parquet')
 
 # %% [markdown]
 # ## PCA

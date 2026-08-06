@@ -7,7 +7,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.19.5
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: project-7-abel (3.12.13)
 #     language: python
 #     name: python3
 # ---
@@ -60,11 +60,19 @@ from scipy.cluster.hierarchy import linkage, dendrogram
 sns.set_theme(style='whitegrid')
 RANDOM_STATE = 42
 
+# Rutas relativas al notebook: funcionan desde cualquier cwd y crean los directorios.
+from pathlib import Path
+BASE_DIR = Path.cwd().parent
+DATA_CLEANED = BASE_DIR / 'data' / 'cleaned'
+DATA_PROCESSED = BASE_DIR / 'data' / 'processed'
+DATA_CLEANED.mkdir(parents=True, exist_ok=True)
+DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+
 # %% [markdown]
 # ### Leer conjunto de datos y primer vistazo
 
 # %%
-df = pd.read_csv('data/raw/mushrooms.csv')
+df = pd.read_csv('../data/raw/mushrooms.csv')
 df.head()
 
 # %% [markdown]
@@ -121,7 +129,7 @@ df = df.loc[:, df.nunique() > 1]
 print(f"Columnas tras eliminar las constantes: {df.shape[1]}")
 
 # Guardamos el dataset limpio para reutilizarlo en fases posteriores
-df.to_parquet('data/cleaned/mushrooms_cleaned.parquet')
+df.to_parquet(DATA_CLEANED / 'mushrooms_cleaned.parquet')
 
 # %% [markdown]
 # #### Separar entre variables predictoras y variable a predecir
@@ -143,7 +151,7 @@ X = pd.get_dummies(X)
 print(f"Dimensiones tras el One-Hot Encoding: {X.shape}")
 
 # Guardamos el dataset ya codificado para reutilizarlo en fases posteriores
-X.to_parquet('data/processed/mushrooms_encoded.parquet')
+X.to_parquet(DATA_PROCESSED / 'mushrooms_encoded.parquet')
 
 # %% [markdown]
 # #### Train / test split
