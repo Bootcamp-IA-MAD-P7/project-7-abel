@@ -34,9 +34,15 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans
-# Importad el resto a medida que los necesiteis (TSNE, GMM, DBSCAN, metricas...)
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
+from sklearn.manifold import TSNE
+from sklearn.mixture import GaussianMixture
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import (silhouette_score, davies_bouldin_score,
+                             calinski_harabasz_score)
+from scipy.cluster.hierarchy import linkage, dendrogram
 sns.set_theme(style='whitegrid')
 RANDOM_STATE = 42
 
@@ -45,31 +51,43 @@ RANDOM_STATE = 42
 
 # %%
 # Leer el csv (esta en 'data/raw/credit_card.csv') y mostrar las primeras filas.
+df = pd.read_csv('data/raw/credit_card.csv')
+df.head()
 
 # %% [markdown]
 # ### Exploración de datos
 
 # %%
 # Tamano del dataset.
+print(f'Tamaño del dataset: {df.shape[0]} filas y {df.shape[1]} columnas')
 
 # %%
 # Descripcion estadistica. Fijaos en las escalas tan distintas entre variables.
+df.describe()
 
 # %%
 # Tipos de datos.
+df.dtypes
 
 # %% [markdown]
 # #### Nulos
 
 # %%
 # Contar nulos por variable (mostrad solo las que tengan).
+nulos = df.isnull().sum()
+nulos[nulos > 0]
 
 # %% [markdown]
 # Hay nulos en `CREDIT_LIMIT` (1) y `MINIMUM_PAYMENTS` (~313). Al ser variables numéricas muy sesgadas, los imputamos con la **mediana** (más robusta que la media).
 
 # %%
 # 1. Eliminar CUST_ID (es un identificador)
+df = df.drop(columns=['CUST_ID'])
 # 2. Imputar los nulos con la mediana de cada columna
+df = df.fillna(df.median())
+
+# Guardamos el dataset limpio para reutilizarlo en fases posteriores
+df.to_parquet('data/cleaned/credit_card_cleaned.parquet')
 
 # %% [markdown]
 # #### Distribución de algunas variables
@@ -78,6 +96,11 @@ RANDOM_STATE = 42
 
 # %%
 # Pintar histogramas de unas cuantas variables (df[cols].hist...) y observar el sesgo.
+cols_hist = ['BALANCE', 'PURCHASES', 'CASH_ADVANCE', 'CREDIT_LIMIT', 'PAYMENTS', 'MINIMUM_PAYMENTS']
+df[cols_hist].hist(figsize=(14, 8), bins=30)
+plt.suptitle('Histogramas de variables clave: se observa el sesgo típico financiero')
+plt.tight_layout()
+plt.show()
 
 # %% [markdown]
 # ### Escalado
@@ -86,6 +109,12 @@ RANDOM_STATE = 42
 
 # %%
 # Aplicar StandardScaler a df -> X (array escalado)
+scaler = StandardScaler()
+X = scaler.fit_transform(df)
+X_scaled = pd.DataFrame(X, columns=df.columns)
+
+# Guardamos el dataset escalado (listo para modelar) para reutilizarlo en fases posteriores
+X_scaled.to_parquet('data/processed/credit_card_scaled.parquet')
 
 # %% [markdown]
 # ## PCA
@@ -94,11 +123,34 @@ RANDOM_STATE = 42
 
 # %%
 # 1. Ajustar PCA sin fijar n_components y mirar explained_variance_ratio_
+pca_full = PCA(random_state=RANDOM_STATE)
+pca_full.fit(X)
+print('Varianza explicada por componente:', pca_full.explained_variance_ratio_.round(3))
 # 2. Pintar la varianza explicada acumulada (scree plot)
+cum_var = np.cumsum(pca_full.explained_variance_ratio_)
+plt.figure(figsize=(8, 5))
+plt.plot(range(1, len(cum_var) + 1), cum_var, marker='o')
+plt.axhline(y=0.80, color='red', linestyle='--', label='80% de varianza')
+plt.title('Varianza explicada acumulada (scree plot)')
+plt.xlabel('Número de componentes')
+plt.ylabel('Varianza acumulada')
+plt.legend()
+plt.show()
 # 3. Decidir cuantas componentes hacen falta para ~80% de varianza
+n_80 = np.argmax(cum_var >= 0.80) + 1
+print(f'Hacen falta {n_80} componentes para explicar el 80% de la varianza')
 
 # %%
 # Proyectar X a 2 componentes y pintar el scatter (aun sin colores: no hay etiqueta)
+pca_2d = PCA(n_components=2, random_state=RANDOM_STATE)
+X_2d = pca_2d.fit_transform(X)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(X_2d[:, 0], X_2d[:, 1], alpha=0.4, s=10)
+plt.title('Proyección PCA (2 componentes): nube continua de clientes')
+plt.xlabel('PC1')
+plt.ylabel('PC2')
+plt.show()
 
 # %% [markdown]
 # A diferencia de las setas, aquí no vemos grupos separados a simple vista: es más bien una **nube continua**. El clustering nos ayudará a trazar fronteras útiles dentro de ella.
@@ -111,14 +163,34 @@ k_values = range(2, 9)
 inercias, silhouettes = [], []
 for k in k_values:
     # Ajustar KMeans y guardar inercia + silhouette
-    pass
+    km = KMeans(n_clusters=k, random_state=RANDOM_STATE, n_init=10)
+    labels = km.fit_predict(X)
+    inercias.append(km.inertia_)
+    silhouettes.append(silhouette_score(X, labels))
+
 # Pintar las dos curvas y elegir best_k (el de mayor silhouette)
+fig, ax = plt.subplots(1, 2, figsize=(14, 5))
+ax[0].plot(list(k_values), inercias, marker='o')
+ax[0].set_title('Método del codo (inercia)')
+ax[0].set_xlabel('k')
+ax[1].plot(list(k_values), silhouettes, marker='o', color='green')
+ax[1].set_title('Coeficiente de silhouette')
+ax[1].set_xlabel('k')
+plt.tight_layout()
+plt.show()
+
+best_k = k_values[np.argmax(silhouettes)]
+print(f'Mejor k según silhouette: {best_k} (silhouette = {max(silhouettes):.4f})')
 
 # %% [markdown]
 # ### K-Means final
 
 # %%
 # Entrenar KMeans con best_k, guardar las etiquetas y mirar el tamano de cada cluster
+kmeans = KMeans(n_clusters=best_k, random_state=RANDOM_STATE, n_init=10)
+kmeans.fit(X)
+labels_km = kmeans.labels_
+print('Tamaño de cada cluster:', pd.Series(labels_km).value_counts().sort_index().to_dict())
 
 # %% [markdown]
 # ### Comparativa de algoritmos
@@ -128,12 +200,38 @@ for k in k_values:
 # %%
 # Definir evaluar(nombre, labels, X) con silhouette, davies_bouldin y calinski_harabasz
 # (sin ARI: no hay etiqueta). Comparar KMeans, Aglomerativo y GMM.
+def evaluar(nombre, labels, X):
+    return {
+        'modelo': nombre,
+        'silhouette': silhouette_score(X, labels),
+        'davies_bouldin': davies_bouldin_score(X, labels),
+        'calinski_harabasz': calinski_harabasz_score(X, labels),
+    }
+
+modelos = {
+    'KMeans': kmeans.labels_,
+    'Aglomerativo': AgglomerativeClustering(n_clusters=best_k).fit_predict(X),
+    'GMM': GaussianMixture(n_components=best_k, random_state=RANDOM_STATE).fit_predict(X),
+}
+
+tabla_comparativa = pd.DataFrame(
+    [evaluar(nombre, labels, X) for nombre, labels in modelos.items()]
+)
+tabla_comparativa
 
 # %% [markdown]
 # ### Dendrograma
 
 # %%
 # linkage + dendrogram sobre una muestra de X
+X_sample, _ = train_test_split(X, test_size=0.95, random_state=RANDOM_STATE)
+Z = linkage(X_sample, method='ward')
+plt.figure(figsize=(14, 6))
+dendrogram(Z, no_labels=True)
+plt.title('Dendrograma (linkage ward) sobre una muestra de X escalado')
+plt.xlabel('Muestras')
+plt.ylabel('Distancia')
+plt.show()
 
 # %% [markdown]
 # ### DBSCAN: ¿hay clusters de densidad aquí?
@@ -142,6 +240,11 @@ for k in k_values:
 
 # %%
 # Ejecutar DBSCAN sobre la proyeccion PCA(2). Observar cuantos clusters y cuanto ruido.
+dbscan = DBSCAN(eps=0.5, min_samples=10).fit(X_2d)
+n_clusters = len(set(dbscan.labels_)) - (1 if -1 in dbscan.labels_ else 0)
+n_ruido = (dbscan.labels_ == -1).sum()
+print(f'DBSCAN (sobre PCA(2)) -> clusters: {n_clusters} | ruido: {n_ruido} '
+      f'({n_ruido / len(dbscan.labels_) * 100:.1f}%)')
 
 # %% [markdown]
 # ### Visualización de los segmentos (t-SNE)
@@ -150,6 +253,16 @@ for k in k_values:
 
 # %%
 # t-SNE sobre una muestra de X, coloreado por el cluster de KMeans
+X_tsne_sample, _, labels_tsne, _ = train_test_split(X, labels_km, test_size=0.8,
+                                                    random_state=RANDOM_STATE, stratify=labels_km)
+tsne = TSNE(n_components=2, random_state=RANDOM_STATE, perplexity=30, max_iter=1000)
+X_tsne = tsne.fit_transform(X_tsne_sample)
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=labels_tsne, palette='Set2', alpha=0.6)
+plt.title('t-SNE (muestra) coloreado por el segmento de K-Means')
+plt.legend(title='Cluster')
+plt.show()
 
 # %% [markdown]
 # ## Interpretación de los segmentos
@@ -158,11 +271,38 @@ for k in k_values:
 
 # %%
 # 1. Anadir la columna 'cluster' al df original (sin escalar)
+df_clusters = df.copy()
+df_clusters['cluster'] = labels_km
+
 # 2. Calcular la media de cada variable por cluster
+perfil_clusters = df_clusters.groupby('cluster').mean()
+print(perfil_clusters)
+
 # 3. Estandarizar entre clusters y pintar un heatmap (perfil de cada segmento)
+perfil_z = perfil_clusters.apply(lambda fila: (fila - fila.mean()) / fila.std(), axis=1)
+plt.figure(figsize=(14, 6))
+sns.heatmap(perfil_z, annot=True, cmap='RdBu_r', center=0, fmt='.2f',
+            cbar_kws={'label': 'Desviación respecto a la media entre clusters'})
+plt.title('Perfil de cada segmento (medias estandarizadas entre clusters)')
+plt.show()
 
 # %% [markdown]
 # Leyendo el heatmap se pueden nombrar los segmentos en términos de **negocio**, por ejemplo: clientes de alto saldo y muchas compras (VIP), clientes que tiran de adelantos de efectivo (riesgo), clientes poco activos, etc. Ese nombre y la estrategia asociada es justo el entregable que pide el caso.
+
+# %%
+# Nombrar cada segmento en terminos de negocio a partir de su perfil estandarizado
+def nombre_segmento(fila):
+    if fila['PURCHASES'] > 1:
+        return 'VIP (grandes compradores)'
+    if fila['CASH_ADVANCE'] > 1:
+        return 'Riesgo (adelantos de efectivo)'
+    if fila['CREDIT_LIMIT'] > 2:
+        return 'Alto límite, bajo uso'
+    return 'Perfil medio'
+
+nombres_segmentos = perfil_z.apply(nombre_segmento, axis=1)
+nombres_segmentos.index.name = 'cluster'
+print(nombres_segmentos.to_string())
 
 # %% [markdown]
 # ## Detección de anomalías (Isolation Forest)
@@ -171,6 +311,17 @@ for k in k_values:
 
 # %%
 # IsolationForest sobre X, marcar los atipicos (-1) y pintarlos sobre PCA(2)
+iso_forest = IsolationForest(contamination=0.05, random_state=RANDOM_STATE)
+iso_forest.fit(X)
+anomalias = iso_forest.predict(X)
+print('Número de clientes atípicos:', (anomalias == -1).sum())
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x=X_2d[:, 0], y=X_2d[:, 1], hue=(anomalias == -1),
+                palette={False: 'blue', True: 'red'}, alpha=0.6, s=10)
+plt.title('Clientes atípicos detectados por Isolation Forest (proyección PCA)')
+plt.legend(title='Anomalía')
+plt.show()
 
 # %% [markdown]
 # ---
