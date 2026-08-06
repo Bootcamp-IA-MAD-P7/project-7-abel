@@ -166,7 +166,6 @@ plt.figure(figsize=(10, 6))
 scatter = sns.scatterplot(x=X_train_pca[:, 0], y=X_train_pca[:, 1],
                           hue=y_train, palette='Set1', alpha=0.6)
 scatter.set_title('Proyección PCA (2 componentes) coloreada por la etiqueta real')
-plt.show()
 
 # %% [markdown]
 # Parece que está bastante separadito, ¡a ojo mucho se puede ver! :)
@@ -211,7 +210,6 @@ sns.lineplot(x=list(n_features), y=scores)
 plt.title('Precisión de Random Forest según el número de componentes PCA')
 plt.xlabel('Número de componentes')
 plt.ylabel('Precisión en test')
-plt.show()
 
 # %% [markdown]
 # A partir de ~10 componentes ya tenemos la precisión que queríamos, reduciendo las variables a una fracción de las originales.
@@ -233,7 +231,6 @@ X_tsne = tsne.fit_transform(X_sample)
 plt.figure(figsize=(10, 6))
 sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=y_sample, palette='Set1', alpha=0.6)
 plt.title('t-SNE (muestra) coloreado por la etiqueta real')
-plt.show()
 
 # %% [markdown]
 # ---
@@ -273,7 +270,6 @@ ax[1].plot(list(k_values), silhouettes, marker='o', color='green')
 ax[1].set_title('Coeficiente de silhouette')
 ax[1].set_xlabel('k')
 plt.tight_layout()
-plt.show()
 
 # %% [markdown]
 # ### K-Means final y comparación con la etiqueta
@@ -349,7 +345,6 @@ dendrogram(Z, no_labels=True)
 plt.title('Dendrograma (linkage ward) sobre una muestra de X_red')
 plt.xlabel('Muestras')
 plt.ylabel('Distancia')
-plt.show()
 
 # %% [markdown]
 # ### DBSCAN: la **métrica de distancia importa**
@@ -397,7 +392,6 @@ axes[0].set_title('Clusters de K-Means')
 sns.scatterplot(x=X_2d[:, 0], y=X_2d[:, 1], hue=y.values, palette='Set1', ax=axes[1], alpha=0.6)
 axes[1].set_title('Etiqueta real')
 plt.tight_layout()
-plt.show()
 
 # %% [markdown]
 # Es bastante parecido, ¿no? No es tan bueno como Random Forest (que usa etiquetas), pero K-Means ha identificado bastante bien la estructura **sin usarlas**. Si no tuviéramos etiquetas, esta aproximación nos ayudaría mucho a clasificar los tipos de hongos.
@@ -420,7 +414,6 @@ plt.figure(figsize=(10, 6))
 sns.scatterplot(x=X_2d[:, 0], y=X_2d[:, 1], hue=(anomalias == -1), palette={False: 'blue', True: 'red'}, alpha=0.6)
 plt.title('Anomalías detectadas por Isolation Forest (proyección PCA)')
 plt.legend(title='Anomalía')
-plt.show()
 
 # %% [markdown]
 # ---

@@ -100,7 +100,6 @@ cols_hist = ['BALANCE', 'PURCHASES', 'CASH_ADVANCE', 'CREDIT_LIMIT', 'PAYMENTS',
 df[cols_hist].hist(figsize=(14, 8), bins=30)
 plt.suptitle('Histogramas de variables clave: se observa el sesgo típico financiero')
 plt.tight_layout()
-plt.show()
 
 # %% [markdown]
 # ### Escalado
@@ -135,7 +134,6 @@ plt.title('Varianza explicada acumulada (scree plot)')
 plt.xlabel('Número de componentes')
 plt.ylabel('Varianza acumulada')
 plt.legend()
-plt.show()
 # 3. Decidir cuantas componentes hacen falta para ~80% de varianza
 n_80 = np.argmax(cum_var >= 0.80) + 1
 print(f'Hacen falta {n_80} componentes para explicar el 80% de la varianza')
@@ -150,7 +148,6 @@ plt.scatter(X_2d[:, 0], X_2d[:, 1], alpha=0.4, s=10)
 plt.title('Proyección PCA (2 componentes): nube continua de clientes')
 plt.xlabel('PC1')
 plt.ylabel('PC2')
-plt.show()
 
 # %% [markdown]
 # A diferencia de las setas, aquí no vemos grupos separados a simple vista: es más bien una **nube continua**. El clustering nos ayudará a trazar fronteras útiles dentro de ella.
@@ -177,7 +174,6 @@ ax[1].plot(list(k_values), silhouettes, marker='o', color='green')
 ax[1].set_title('Coeficiente de silhouette')
 ax[1].set_xlabel('k')
 plt.tight_layout()
-plt.show()
 
 best_k = k_values[np.argmax(silhouettes)]
 print(f'Mejor k según silhouette: {best_k} (silhouette = {max(silhouettes):.4f})')
@@ -231,7 +227,6 @@ dendrogram(Z, no_labels=True)
 plt.title('Dendrograma (linkage ward) sobre una muestra de X escalado')
 plt.xlabel('Muestras')
 plt.ylabel('Distancia')
-plt.show()
 
 # %% [markdown]
 # ### DBSCAN: ¿hay clusters de densidad aquí?
@@ -262,7 +257,6 @@ plt.figure(figsize=(10, 6))
 sns.scatterplot(x=X_tsne[:, 0], y=X_tsne[:, 1], hue=labels_tsne, palette='Set2', alpha=0.6)
 plt.title('t-SNE (muestra) coloreado por el segmento de K-Means')
 plt.legend(title='Cluster')
-plt.show()
 
 # %% [markdown]
 # ## Interpretación de los segmentos
@@ -284,7 +278,6 @@ plt.figure(figsize=(14, 6))
 sns.heatmap(perfil_z, annot=True, cmap='RdBu_r', center=0, fmt='.2f',
             cbar_kws={'label': 'Desviación respecto a la media entre clusters'})
 plt.title('Perfil de cada segmento (medias estandarizadas entre clusters)')
-plt.show()
 
 # %% [markdown]
 # Leyendo el heatmap se pueden nombrar los segmentos en términos de **negocio**, por ejemplo: clientes de alto saldo y muchas compras (VIP), clientes que tiran de adelantos de efectivo (riesgo), clientes poco activos, etc. Ese nombre y la estrategia asociada es justo el entregable que pide el caso.
@@ -321,7 +314,6 @@ sns.scatterplot(x=X_2d[:, 0], y=X_2d[:, 1], hue=(anomalias == -1),
                 palette={False: 'blue', True: 'red'}, alpha=0.6, s=10)
 plt.title('Clientes atípicos detectados por Isolation Forest (proyección PCA)')
 plt.legend(title='Anomalía')
-plt.show()
 
 # %% [markdown]
 # ---
